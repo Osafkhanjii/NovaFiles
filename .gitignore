@@ -22,7 +22,9 @@ Desktop.ini
 # Electron
 *.asar
 
+# Auto-push script (local use only)
+auto-push.cmd
+
 # Temp
 *.tmp
 *.temp
-src/main/icon-extractor.ps1
