@@ -1,0 +1,44 @@
+{
+  "name": "nova-files",
+  "version": "1.0.0",
+  "description": "Nova Files - Modern Windows Desktop File Manager",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --x64"
+  },
+  "keywords": [
+    "file-manager",
+    "windows",
+    "desktop",
+    "electron"
+  ],
+  "author": "Nova Files Team",
+  "license": "MIT",
+  "build": {
+    "appId": "com.novafiles.app",
+    "productName": "Nova Files",
+    "win": {
+      "target": [
+        "dir",
+        "portable"
+      ],
+      "signAndEditExecutable": false
+    },
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ]
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "dependencies": {
+    "image-size": "^1.1.1",
+    "koffi": "^3.3.1"
+  }
+}

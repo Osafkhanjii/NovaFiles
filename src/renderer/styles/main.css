@@ -1,0 +1,521 @@
+@import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;500;600;700&family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --win-base: #18191c;
+  --win-surface: #1f2024;
+  --win-chrome: #1c1d21;
+  --win-header: #202227;
+  --win-sidebar: #17181b;
+  --win-hover: rgba(255, 255, 255, 0.07);
+  --win-selected: rgba(0, 120, 212, 0.24);
+  --win-selected-border: #0078d4;
+  --win-border: #2e323b;
+  --win-subtle-border: #252830;
+  --win-accent: #0078d4;
+  --win-accent-hover: #1084d8;
+  --win-text: #f5f5f7;
+  --win-text-sec: #cbd0dc;
+  --win-text-muted: #9499ab;
+
+  /* Dynamic Continuous Icon Sizing Tokens (Default: Medium) */
+  --item-size: 156px;
+  --icon-size: 128px;
+  --grid-gap: 14px;
+  --item-font-size: 13px;
+
+  /* Details View Tokens */
+  --details-icon-size: 16px;
+  --details-row-height: 28px;
+  --details-font-size: 12px;
+  --details-padding-x: 10px;
+  --details-padding-y: 4px;
+  --details-gap: 3px;
+  --details-col-gap: 8px;
+}
+
+/* Themes */
+body.theme-slate {
+  --win-base: #1c212b;
+  --win-surface: #242937;
+  --win-chrome: #202532;
+  --win-header: #262c3b;
+  --win-sidebar: #181d27;
+  --win-border: #353d4f;
+  --win-subtle-border: #2b3242;
+  --win-accent: #3b82f6;
+  --win-accent-hover: #60a5fa;
+  --win-text: #f8fafc;
+  --win-text-sec: #cbd5e1;
+  --win-text-muted: #94a3b8;
+}
+
+body.theme-midnight {
+  --win-base: #0a0c10;
+  --win-surface: #12151d;
+  --win-chrome: #0f1118;
+  --win-header: #141722;
+  --win-sidebar: #090b0e;
+  --win-border: #1e2434;
+  --win-subtle-border: #171c2a;
+  --win-accent: #6366f1;
+  --win-accent-hover: #818cf8;
+  --win-text: #f8fafc;
+  --win-text-sec: #cbd5e1;
+  --win-text-muted: #64748b;
+}
+
+body.theme-light {
+  --win-base: #ffffff;
+  --win-surface: #f8f9fa;
+  --win-chrome: #f1f3f6;
+  --win-header: #ffffff;
+  --win-sidebar: #f3f5f9;
+  --win-hover: rgba(0, 0, 0, 0.06);
+  --win-selected: rgba(0, 120, 212, 0.16);
+  --win-selected-border: #0078d4;
+  --win-border: #d2d6df;
+  --win-subtle-border: #e1e4ec;
+  --win-text: #17181c;
+  --win-text-sec: #373b45;
+  --win-text-muted: #686e7e;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #3c404d; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #4d5364; }
+body.theme-light ::-webkit-scrollbar-thumb { background: #c2c7d2; }
+body.theme-light ::-webkit-scrollbar-thumb:hover { background: #a2a8b6; }
+
+/* Electron Window Drag Regions */
+.titlebar-draggable {
+  -webkit-app-region: drag;
+  user-select: none;
+}
+.titlebar-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* Authentic Windows Selection Overlay */
+.desktop-item {
+  border: 1px solid transparent;
+  border-radius: 6px;
+  user-select: none;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.desktop-item:hover {
+  background-color: var(--win-hover);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+body.theme-light .desktop-item:hover {
+  border-color: rgba(0, 0, 0, 0.14);
+}
+.desktop-item.is-selected {
+  background-color: var(--win-selected) !important;
+  border-color: var(--win-selected-border) !important;
+  outline: 1px solid var(--win-selected-border);
+}
+
+.desktop-item.is-cut {
+  opacity: 0.5;
+  filter: grayscale(50%);
+}
+
+/* Search input — always visible box, blue highlight on focus */
+#desktop-search {
+  outline: none;
+  border: 1px solid var(--win-border, #2e323b);
+  border-radius: 4px;
+  padding: 0 8px;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+#desktop-search:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+#desktop-search:focus {
+  outline: none;
+  border-color: var(--win-accent, #0078d4);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 0 1px var(--win-accent, #0078d4);
+}
+
+/* ── Global: kill ALL Tailwind forms-plugin focus rings (except search bar) ── */
+input:not(#desktop-search):focus,
+input:not(#desktop-search):focus-visible,
+textarea:focus,
+textarea:focus-visible,
+select:focus,
+select:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  --tw-ring-offset-shadow: none !important;
+  --tw-ring-shadow: none !important;
+  --tw-ring-offset-width: 0 !important;
+  --tw-ring-offset-color: transparent !important;
+  --tw-ring-color: transparent !important;
+  border-color: inherit !important;
+}
+
+/* Remove focus ring/box from breadcrumb address bar */
+#breadcrumb-container,
+#breadcrumb-container:focus,
+#breadcrumb-container:focus-within,
+#breadcrumb-container *:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  ring: none !important;
+}
+#breadcrumb-container {
+  --tw-ring-offset-shadow: none !important;
+  --tw-ring-shadow: none !important;
+}
+
+/* Address input — no box on focus */
+#address-input {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+  background: transparent;
+}
+#address-input:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+#address-input-container {
+  outline: none !important;
+  box-shadow: none !important;
+}
+#address-input-container:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+/* Dynamic Continuous Desktop Icon Grid Styles */
+#desktop-grid.grid-icons-dynamic {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--item-size), 1fr));
+  gap: var(--grid-gap);
+  align-items: start;
+}
+
+#desktop-grid.grid-icons-dynamic .desktop-item {
+  width: 100%;
+  max-width: var(--item-size);
+  margin: 0 auto;
+  padding: 10px 8px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition: background-color 0.08s ease, border-color 0.08s ease;
+}
+
+#desktop-grid.grid-icons-dynamic .icon-slot {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  max-width: 100%;
+  max-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: visible;
+  border-radius: 6px;
+  will-change: width, height;
+}
+
+#desktop-grid.grid-icons-dynamic .icon-slot svg {
+  width: 88%;
+  height: 88%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* Thumbnail rule: exactly same size as file icon */
+#desktop-grid.grid-icons-dynamic .icon-slot img.item-thumbnail {
+  width: 88%;
+  height: 88%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  display: block;
+}
+
+#desktop-grid.grid-icons-dynamic .item-name {
+  font-size: var(--item-font-size);
+  line-height: 1.3;
+  width: 100%;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 6px;
+}
+
+/* Folder preview thumbnail — fade-in on load */
+.folder-preview-thumb {
+  transition: opacity 0.2s ease;
+  image-rendering: auto;
+}
+
+/* Folder preview container: all layers are position:absolute, fills the icon-slot */
+#desktop-grid.grid-icons-dynamic .icon-slot .folder-preview-container {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+/* Folder back and front SVGs must fill container fully */
+#desktop-grid.grid-icons-dynamic .icon-slot .folder-preview-container > svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Windows shell icons in icons view — scale with zoom */
+#desktop-grid.grid-icons-dynamic .icon-slot .shell-icon-wrapper {
+  width: 88%;
+  height: 88%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+#desktop-grid.grid-icons-dynamic .icon-slot .shell-icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: auto;
+  display: block;
+}
+#desktop-grid.grid-icons-dynamic.huge-scale .icon-slot .shell-icon-wrapper {
+  width: 100%;
+  height: 100%;
+}
+
+/* Windows shell icons in details view */
+.details-shell-icon {
+  width: var(--details-icon-size);
+  height: var(--details-icon-size);
+  object-fit: contain;
+  image-rendering: auto;
+}
+
+/* Image thumbnails in icons view — scale with zoom via --icon-size */
+#desktop-grid.grid-icons-dynamic .icon-slot img.file-thumbnail {
+  width: 88%;
+  height: 88%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  display: block;
+}
+#desktop-grid.grid-icons-dynamic.huge-scale .icon-slot img.file-thumbnail {
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+}
+
+/* Inspector responsive utilities */
+#inspector-pane .overflow-wrap-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
+}
+#inspector-pane table {
+  table-layout: auto;
+}
+#inspector-pane td {
+  min-width: 0;
+}
+
+/* At Huge scale: ensure item container grows together and no clipping */
+#desktop-grid.grid-icons-dynamic.huge-scale {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr));
+}
+#desktop-grid.grid-icons-dynamic.huge-scale .desktop-item {
+  max-width: 100%;
+  padding: 16px;
+}
+#desktop-grid.grid-icons-dynamic.huge-scale .icon-slot {
+  width: min(70vw, 340px);
+  height: min(70vw, 340px);
+}
+#desktop-grid.grid-icons-dynamic.huge-scale .item-name {
+  -webkit-line-clamp: 3;
+  font-size: 15px;
+  font-weight: 500;
+  margin-top: 10px;
+}
+
+/* ── Details View: Windows-like Table ────────────────────────────────────────── */
+/* Shared grid definition for header AND rows */
+.details-grid {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) 180px 140px 100px;
+  align-items: center;
+  padding: 0 var(--details-padding-x);
+  min-height: var(--details-row-height);
+  transition: min-height 0.15s ease;
+}
+
+#details-header .details-grid {
+  padding: 6px var(--details-padding-x);
+  font-size: var(--details-font-size);
+  min-height: 28px;
+}
+
+/* Row layout uses same grid */
+#desktop-grid.grid-details .desktop-item {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) 180px 140px 100px;
+  align-items: center;
+  padding: 0 var(--details-padding-x);
+  min-height: var(--details-row-height);
+  gap: 0;
+  transition: background-color 0.06s ease, min-height 0.15s ease;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+/* Sticky header */
+#details-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  letter-spacing: 0.01em;
+}
+
+/* Column alignment helpers */
+.col-name  { min-width: 0; }
+.col-date  { min-width: 0; }
+.col-type  { min-width: 0; }
+.col-size  { min-width: 0; text-align: right; font-family: 'JetBrains Mono', Consolas, monospace; }
+
+#desktop-grid.grid-details .desktop-item .details-icon-slot {
+  width: var(--details-icon-size);
+  height: var(--details-icon-size);
+  flex-shrink: 0;
+}
+
+#desktop-grid.grid-details .desktop-item .details-icon-slot svg {
+  width: 100%;
+  height: 100%;
+}
+
+#desktop-grid.grid-details .desktop-item .details-icon-slot .details-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 3px;
+}
+
+#desktop-grid.grid-details .desktop-item .details-name-text {
+  font-size: var(--details-font-size);
+  line-height: 1.3;
+}
+
+#desktop-grid.grid-details .desktop-item .details-col-text {
+  font-size: var(--details-font-size);
+}
+
+/* Slider Custom Styling */
+input[type=range].win-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: #383c48;
+  height: 5px;
+  border-radius: 3px;
+  outline: none;
+  transition: background 0.15s ease;
+}
+body.theme-light input[type=range].win-slider {
+  background: #cbd0dc;
+}
+
+/* Zoom control area: highlight track when hovered */
+#zoom-control-area:hover input[type=range].win-slider {
+  background: #4a5068;
+}
+body.theme-light #zoom-control-area:hover input[type=range].win-slider {
+  background: #b0b8cc;
+}
+
+input[type=range].win-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 15px;
+  width: 15px;
+  border-radius: 50%;
+  background: var(--win-accent);
+  cursor: pointer;
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 5px rgba(0,0,0,0.45);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+input[type=range].win-slider::-webkit-slider-thumb:hover,
+#zoom-control-area:hover input[type=range].win-slider::-webkit-slider-thumb {
+  transform: scale(1.28);
+  box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.28), 0 2px 8px rgba(0,0,0,0.5);
+}
+
+/* Modals */
+.modal-overlay {
+  background-color: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(5px);
+}
+
+/* ── Resizable Panel Dividers ──────────────────────────────────────────────── */
+.resize-handle {
+  width: 6px;
+  cursor: col-resize;
+  background: transparent;
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+  transition: background-color 0.12s ease;
+  margin: 0 -1px; /* extend hit area slightly without visual width */
+}
+
+.resize-handle:hover {
+  background-color: var(--win-accent);
+}
+
+.resize-handle:active {
+  background-color: var(--win-accent);
+}
+
+/* Visual indicator line */
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 32px;
+  border-radius: 1px;
+  background: var(--win-border);
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.resize-handle:hover::after {
+  opacity: 1;
+  background: white;
+}
