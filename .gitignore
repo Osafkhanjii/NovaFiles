@@ -25,3 +25,4 @@ Desktop.ini
 # Temp
 *.tmp
 *.temp
+src/main/icon-extractor.ps1
