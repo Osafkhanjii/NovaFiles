@@ -445,22 +445,17 @@ select:focus-visible {
   font-size: var(--details-font-size);
 }
 
-/* Status bar zoom area — hidden by default, visible on hover */
+/* Status bar zoom area — always visible, nice styling */
 #zoom-control-area {
-  opacity: 0;
-  max-width: 0;
-  overflow: hidden;
-  transition: opacity 0.2s ease, max-width 0.2s ease, padding 0.2s ease;
-  padding-left: 0 !important;
-  padding-right: 0 !important;
+  opacity: 1;
+  max-width: 500px;
+  overflow: visible;
+  padding-left: 5px;
+  padding-right: 5px;
+  transition: opacity 0.15s ease;
 }
-footer:hover #zoom-control-area,
-#zoom-control-area.visible {
-  opacity: 1 !important;
-  max-width: 500px !important;
-  overflow: visible !important;
-  padding-left: 5px !important;
-  padding-right: 5px !important;
+#zoom-control-area:hover {
+  opacity: 1;
 }
 
 /* Zoom slider styling */

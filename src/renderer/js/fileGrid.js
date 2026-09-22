@@ -239,18 +239,10 @@ class FileGrid {
   // ── Zoom area hover show/hide ─────────────────────────
 
   _initZoomHover() {
-    const footer = document.querySelector('footer');
-    if (footer) {
-      footer.addEventListener('mouseenter', () => {
-        this.zoomArea?.classList.add('visible');
-      });
-      footer.addEventListener('mouseleave', () => {
-        this.zoomArea?.classList.remove('visible');
-      });
-    }
+    // Zoom area always visible — just ensure it stays visible when slider is focused
     if (this.slider) {
-      this.slider.addEventListener('focus', () => { this._sliderFocused = true; });
-      this.slider.addEventListener('blur', () => { this._sliderFocused = false; });
+      this.slider.addEventListener('focus', () => { this.zoomArea?.classList.add('visible'); });
+      this.slider.addEventListener('blur', () => { this.zoomArea?.classList.remove('visible'); });
     }
   }
 
