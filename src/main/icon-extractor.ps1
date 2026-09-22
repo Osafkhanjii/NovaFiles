@@ -41,13 +41,6 @@ public class NovaJumbo {
         if (hicon == IntPtr.Zero) return null;
         return Icon.FromHandle(hicon);
     }
-
-    public static Icon GetAssoc(string path) {
-        SHFILEINFO shfi = new SHFILEINFO();
-        IntPtr res = SHGetFileInfo(path, 0, ref shfi, (uint)Marshal.SizeOf(shfi), 0x100);
-        if (shfi.hIcon == IntPtr.Zero) return null;
-        return Icon.FromHandle(shfi.hIcon);
-    }
 }
 "@
 Add-Type -TypeDefinition $code -ReferencedAssemblies System.Drawing
@@ -76,19 +69,10 @@ foreach ($p in $paths) {
         $resolved = Resolve-Target $p
         $icon = $null
 
-        # 1. Jumbo (256x256) — BEST for .lnk, folders, exe, dll
         try { $icon = [NovaJumbo]::GetJumbo($resolved) } catch {}
-
-        # 2. Association icon (SHGetFileInfo) — for .zip, .pdf, .docx, etc.
-        if ($icon -eq $null) {
-            try { $icon = [NovaJumbo]::GetAssoc($resolved) } catch {}
-        }
-
-        # 3. ExtractAssociatedIcon — last resort
         if ($icon -eq $null) {
             try { $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($resolved) } catch {}
         }
-
         if ($icon -eq $null) { $results[$p] = $null; continue }
 
         $bmp = $icon.ToBitmap()
@@ -110,7 +94,7 @@ foreach ($p in $paths) {
 
         $hash = [System.BitConverter]::ToString(
             [System.Security.Cryptography.MD5]::Create().ComputeHash(
-                [System.Text.Encoding]::UTF8.GetBytes("v7|$p|$TargetSize")
+                [System.Text.Encoding]::UTF8.GetBytes("v8|$p|$TargetSize")
             )
         ).Replace('-','').ToLower()
         $file = Join-Path $CacheDir "$hash.png"

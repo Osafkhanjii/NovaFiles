@@ -28,7 +28,7 @@ class NovaFilesApp {
     this.contextMenu = new ContextMenuController(this);
     this.themesManager = new ThemesManager(this);
 
-    // Load drives and standard user folders
+    // Load drives and standard user folders (ONCE)
     await this.loadDrives();
     await this.loadSpecialFolders();
     this.renderThisPC();
@@ -39,6 +39,23 @@ class NovaFilesApp {
 
     // Initialize resizable panels
     this.initResizablePanels();
+
+    // Prefetch common folders after 1.5 sec (background)
+    setTimeout(() => this._prefetchCommonFolders(), 1500);
+  }
+
+  async _prefetchCommonFolders() {
+    const folders = this.specialFolders?.slice(0, 3) || [];
+    for (const folder of folders) {
+      if (!folder.path) continue;
+      try {
+        const data = await window.electronAPI.readDirectory(folder.path);
+        const paths = (data.items || []).slice(0, 50).map(i => i.path);
+        if (paths.length > 0) {
+          window.electronAPI.getFileIconsBatch(paths, 256).catch(() => {});
+        }
+      } catch (e) {}
+    }
   }
 
   getInitialLocation() {
@@ -170,7 +187,6 @@ class NovaFilesApp {
     if (!container) return;
     container.innerHTML = '';
 
-    // This PC header item
     const thisPC = document.createElement('a');
     thisPC.className = 'flex items-center px-2.5 h-8 rounded-md hover:bg-white/5 text-win-textSecondary hover:text-win-text transition-colors cursor-pointer text-[13px] font-medium';
     thisPC.innerHTML = `
@@ -184,7 +200,6 @@ class NovaFilesApp {
     });
     container.appendChild(thisPC);
 
-    // Drives under This PC
     if (this.drives && this.drives.length > 0) {
       this.drives.forEach(drive => {
         const driveEl = document.createElement('a');
@@ -208,7 +223,6 @@ class NovaFilesApp {
       });
     }
 
-    // Special folders under This PC
     if (this.specialFolders && this.specialFolders.length > 0) {
       this.specialFolders.forEach(folder => {
         const folderEl = document.createElement('a');
@@ -236,7 +250,6 @@ class NovaFilesApp {
     const detailsHeader = document.getElementById('details-header');
     if (!grid) return;
 
-    // Hide details header, use icons-style grid
     detailsHeader?.classList.add('hidden');
     grid.className = 'grid-icons-dynamic';
     grid.innerHTML = '';
@@ -247,19 +260,16 @@ class NovaFilesApp {
       return;
     }
 
-    // Section header
     const sectionHeader = document.createElement('div');
     sectionHeader.className = 'col-span-full text-[13px] font-semibold text-win-textSecondary mb-2 px-1';
     sectionHeader.textContent = 'Devices and drives';
     grid.appendChild(sectionHeader);
 
-    // Render each drive as a card
     this.drives.forEach(drive => {
       const card = document.createElement('div');
       card.className = 'desktop-item flex flex-col items-center text-center cursor-pointer group';
       card.dataset.path = drive.path;
 
-      // Drive icon — like Windows Explorer style
       const iconSlot = document.createElement('div');
       iconSlot.className = 'icon-slot mb-1.5 flex items-center justify-center relative';
       iconSlot.innerHTML = `
@@ -279,7 +289,6 @@ class NovaFilesApp {
       nameEl.className = 'item-name text-win-text leading-tight px-1 rounded max-w-full font-normal';
       nameEl.textContent = `${drive.name} (${drive.letter}:)`;
 
-      // Usage bar below the name
       const usageBar = document.createElement('div');
       usageBar.className = 'w-full mt-1 px-2';
       usageBar.innerHTML = `
@@ -296,13 +305,11 @@ class NovaFilesApp {
       card.appendChild(nameEl);
       card.appendChild(usageBar);
 
-      // Double-click → navigate into drive
       card.addEventListener('dblclick', (e) => {
         e.stopPropagation();
         this.navigationManager?.navigateTo(drive.path);
       });
 
-      // Middle-click → open drive in new tab
       card.addEventListener('mousedown', (e) => {
         if (e.button === 1) {
           e.preventDefault();
@@ -311,7 +318,6 @@ class NovaFilesApp {
         }
       });
 
-      // Single click → select
       card.addEventListener('click', (e) => {
         e.stopPropagation();
         this.fileGrid?.clearSelection();
@@ -329,11 +335,9 @@ class NovaFilesApp {
       grid.appendChild(card);
     });
 
-    // Update status bar
     const statusTotal = document.getElementById('status-total-count');
     if (statusTotal) statusTotal.textContent = `${this.drives.length} drives`;
 
-    // Update breadcrumb to show "This PC"
     this.updateBreadcrumbThisPC();
   }
 
@@ -350,7 +354,6 @@ class NovaFilesApp {
     `;
     breadcrumbList.appendChild(thisPcSpan);
 
-    // Update tab title
     const activeTab = this.tabsManager?.getActiveTab();
     if (activeTab) {
       activeTab.title = 'This PC';
@@ -396,7 +399,6 @@ class NovaFilesApp {
   }
 
   async loadDirectory(dirPath) {
-    // Special "This PC" view — show drives in main content area
     if (dirPath === 'This PC') {
       this.renderThisPCView();
       this.highlightSidebarItem('');
@@ -415,17 +417,12 @@ class NovaFilesApp {
       this.currentItems = data.items || [];
       this.sortItems(this.sortField, false);
 
-      // Highlight active sidebar item
       this.highlightSidebarItem(dirPath);
-
-      // Update active drive status in footer
       this.updateFooterDriveInfo(dirPath);
 
-      // Reset search input
       const searchInput = document.getElementById('desktop-search');
       if (searchInput) searchInput.value = '';
 
-      // Clear selection or update inspector to folder overview
       this.fileGrid.clearSelection();
     } catch (err) {
       console.error('Failed to read directory:', err);
@@ -471,7 +468,6 @@ class NovaFilesApp {
     }
 
     this.currentItems.sort((a, b) => {
-      // Folders always first
       if (a.isDirectory && !b.isDirectory) return -1;
       if (!a.isDirectory && b.isDirectory) return 1;
 
@@ -500,11 +496,9 @@ class NovaFilesApp {
     const inspector = document.getElementById('inspector-pane');
     const sidebarHandle = document.getElementById('resize-sidebar');
     const inspectorHandle = document.getElementById('resize-inspector');
-    const mainExplorer = document.getElementById('main-explorer');
 
     if (!sidebar || !inspector || !sidebarHandle || !inspectorHandle) return;
 
-    // Restore persisted widths
     const savedSidebarWidth = localStorage.getItem('nova-sidebar-width');
     const savedInspectorWidth = localStorage.getItem('nova-inspector-width');
     if (savedSidebarWidth) sidebar.style.width = savedSidebarWidth + 'px';
@@ -515,12 +509,10 @@ class NovaFilesApp {
     const MIN_INSPECTOR = 200;
     const MAX_INSPECTOR = 450;
 
-    // Sidebar resize
     this._initResizeDrag(sidebarHandle, sidebar, 'left', MIN_SIDEBAR, MAX_SIDEBAR, (width) => {
       localStorage.setItem('nova-sidebar-width', width);
     });
 
-    // Inspector resize
     this._initResizeDrag(inspectorHandle, inspector, 'right', MIN_INSPECTOR, MAX_INSPECTOR, (width) => {
       localStorage.setItem('nova-inspector-width', width);
     });
@@ -546,7 +538,6 @@ class NovaFilesApp {
       } else {
         newWidth = panel.parentElement.getBoundingClientRect().right - e.clientX;
       }
-      // Dynamic max: ensure main area keeps at least 400px
       const parentRect = panel.parentElement.getBoundingClientRect();
       const handleWidth = 6;
       const minMainArea = 400;
@@ -573,7 +564,6 @@ class NovaFilesApp {
         cancelAnimationFrame(rafId);
         rafId = null;
       }
-      // Apply final width
       if (pendingWidth !== null) {
         panel.style.width = pendingWidth + 'px';
         if (onEnd) onEnd(pendingWidth);

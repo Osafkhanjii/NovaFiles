@@ -1,5 +1,11 @@
 /**
- * FileGrid — Unified Zoom & View System (v3 — BATCH IPC + 4K)
+ * FileGrid — Unified Zoom & View System (v5 — FULL BATCH + 3-BUCKET CACHE + PREFETCH)
+ *
+ * Fixes:
+ *  - 3-bucket cache (64/128/256) → zoom pe instant, no refetch
+ *  - Pre-fetch neighbours on zoom settle → zero delay
+ *  - Batch IPC for both icons & details views
+ *  - Inline styles on <img> → no CSS override for small icons
  */
 
 class FileGrid {
@@ -37,8 +43,13 @@ class FileGrid {
     this._imageCache = new Map();
     this._folderPreviewQueue = [];
     this._folderPreviewRunning = false;
-
     this._loadRequestId = 0;
+    this._prefetchTimeout = null;
+
+    // 3-bucket sizes
+    this._BUCKET_SMALL  = 64;
+    this._BUCKET_MEDIUM = 128;
+    this._BUCKET_LARGE  = 256;
 
     this._initSlider();
     this._initStepButtons();
@@ -47,9 +58,29 @@ class FileGrid {
     this._initAltWheelOnFileArea();
     this._initContainerClick();
     this._initThumbnailObserver();
+    this._initZoomHover();
 
     this.applyZoom(this.zoomLevel, false);
   }
+
+  // ═══════════════════════════════════════════════════════════
+  // 3-BUCKET SIZE (fixes zoom delay)
+  // ═══════════════════════════════════════════════════════════
+
+ _getIconSize() {
+  const iconT = Math.max(0, (this.zoomLevel - 20) / 80);
+  const rawSize = Math.round(52 + iconT * (360 - 52));
+
+  // 2 buckets — sharper icons
+  if (rawSize <= 80) return 64;
+  return 256;   // ← 256 pe jump karo — 128 se 256 behtar hai
+}
+
+  _getThumbnailRequestSize() {
+  const iconSize = this._getIconSize();
+  if (iconSize <= 64) return 128;
+  return 256;   // ← 64 se upar sab 256
+}
 
   _snapSize(size) {
     if (size <= 64) return 64;
@@ -60,6 +91,67 @@ class FileGrid {
     return 2048;
   }
 
+  // ═══════════════════════════════════════════════════════════
+  // Pre-fetch neighbours on zoom settle (fixes mini delay)
+  // ═══════════════════════════════════════════════════════════
+
+  _schedulePrefetch() {
+    if (this._prefetchTimeout) clearTimeout(this._prefetchTimeout);
+    this._prefetchTimeout = setTimeout(() => {
+      this._prefetchNeighbourSizes();
+    }, 300);
+  }
+
+  async _prefetchNeighbourSizes() {
+    const currentSize = this._getIconSize();
+    const sizesToPrefetch = [];
+
+    if (currentSize === this._BUCKET_SMALL) {
+      sizesToPrefetch.push(this._BUCKET_MEDIUM);
+    } else if (currentSize === this._BUCKET_MEDIUM) {
+      sizesToPrefetch.push(this._BUCKET_SMALL, this._BUCKET_LARGE);
+    } else {
+      sizesToPrefetch.push(this._BUCKET_MEDIUM);
+    }
+
+    // Collect all paths currently on screen
+    const wrappers = this.grid?.querySelectorAll('.shell-icon-wrapper') || [];
+    const paths = new Set();
+    for (const w of wrappers) {
+      const fp = w.dataset.filePath;
+      if (fp) paths.add(fp);
+    }
+    if (paths.size === 0) return;
+
+    const pathArr = Array.from(paths);
+
+    for (const size of sizesToPrefetch) {
+      // Skip if all cached
+      let allCached = true;
+      for (const p of pathArr) {
+        if (!this._fileIconCache.has(`${p}|${size}`)) { allCached = false; break; }
+      }
+      if (allCached) continue;
+
+      try {
+        const results = await FileIcons.fetchWindowsIconsBatch(pathArr, size);
+        for (const [fp, res] of Object.entries(results || {})) {
+          if (res && res.dataURL) {
+            this._fileIconCache.set(`${fp}|${size}`, {
+              dataURL: res.dataURL,
+              width: res.width,
+              height: res.height,
+            });
+          }
+        }
+      } catch (e) {}
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // Slider & Controls
+  // ═══════════════════════════════════════════════════════════
+
   _initSlider() {
     if (!this.slider) return;
     this.slider.min   = '0';
@@ -69,14 +161,19 @@ class FileGrid {
     this.slider.addEventListener('input', (e) => {
       this._cancelAnimation();
       this.applyZoom(parseInt(e.target.value, 10), true);
+      this._schedulePrefetch();
     });
   }
 
   _initStepButtons() {
-    this.btnDec?.addEventListener('click', () =>
-      this._animateTo(Math.max(0, this.zoomLevel - 8), true));
-    this.btnInc?.addEventListener('click', () =>
-      this._animateTo(Math.min(100, this.zoomLevel + 8), true));
+    this.btnDec?.addEventListener('click', () => {
+      this._animateTo(Math.max(0, this.zoomLevel - 8), true);
+      this._schedulePrefetch();
+    });
+    this.btnInc?.addEventListener('click', () => {
+      this._animateTo(Math.min(100, this.zoomLevel + 8), true);
+      this._schedulePrefetch();
+    });
   }
 
   _initViewButtons() {
@@ -106,18 +203,24 @@ class FileGrid {
       e.preventDefault(); e.stopPropagation();
       this._cancelAnimation();
       this.applyZoom(Math.min(100, Math.max(0, this.zoomLevel + (e.deltaY < 0 ? 4 : -4))), true);
+      this._schedulePrefetch();
     }, { passive: false });
   }
 
   _initAltWheelOnFileArea() {
+    // Ctrl+Scroll works EVERYWHERE in the app — global listener
     const handler = (e) => {
       if (!e.ctrlKey) return;
       e.preventDefault(); e.stopPropagation();
       this._cancelAnimation();
       this.applyZoom(Math.min(100, Math.max(0, this.zoomLevel + (e.deltaY < 0 ? 4 : -4))), true);
+      this._schedulePrefetch();
     };
     this.container?.addEventListener('wheel', handler, { passive: false });
     this.grid?.addEventListener('wheel', handler, { passive: false });
+
+    // Global listener for Ctrl+Scroll anywhere in the window
+    window.addEventListener('wheel', handler, { passive: false });
   }
 
   _initContainerClick() {
@@ -131,6 +234,24 @@ class FileGrid {
         if (activeTab?.path) this.app.tabsManager?.createTab(activeTab.path, true);
       }
     });
+  }
+
+  // ── Zoom area hover show/hide ─────────────────────────
+
+  _initZoomHover() {
+    const footer = document.querySelector('footer');
+    if (footer) {
+      footer.addEventListener('mouseenter', () => {
+        this.zoomArea?.classList.add('visible');
+      });
+      footer.addEventListener('mouseleave', () => {
+        this.zoomArea?.classList.remove('visible');
+      });
+    }
+    if (this.slider) {
+      this.slider.addEventListener('focus', () => { this._sliderFocused = true; });
+      this.slider.addEventListener('blur', () => { this._sliderFocused = false; });
+    }
   }
 
   _initThumbnailObserver() {
@@ -150,19 +271,8 @@ class FileGrid {
     }, { root: this.container, rootMargin: '120px' });
   }
 
-  _getIconSize() {
-    const iconT = Math.max(0, (this.zoomLevel - 20) / 80);
-    const rawSize = Math.round(52 + iconT * (360 - 52));
-    return this._snapSize(rawSize);
-  }
-
-  _getThumbnailRequestSize() {
-    const raw = Math.max(128, this._getIconSize() * 2);
-    return this._snapSize(raw);
-  }
-
   // ═══════════════════════════════════════════════════════════
-  // BATCH LOAD — ek IPC call
+  // BATCH LOAD for ICONS view
   // ═══════════════════════════════════════════════════════════
 
   async _loadAllShellIcons() {
@@ -229,10 +339,95 @@ class FileGrid {
       img.style.opacity = '1';
       img.style.width = '100%';
       img.style.height = '100%';
+      img.style.maxWidth = '100%';
+      img.style.maxHeight = '100%';
+      img.style.minWidth = '0';
+      img.style.minHeight = '0';
       img.style.objectFit = 'contain';
       img.style.objectPosition = 'center center';
+      img.style.display = 'block';
     }
   }
+
+  // ═══════════════════════════════════════════════════════════
+  // BATCH LOAD for DETAILS view
+  // ═══════════════════════════════════════════════════════════
+
+  async _loadAllDetailsIcons() {
+    const detailsIconSize = 64;
+    const imgs = this.grid?.querySelectorAll('.details-icon-slot img[data-file-path]') || [];
+    if (imgs.length === 0) return;
+
+    const requestId = ++this._loadRequestId;
+    const startZoom = this.zoomLevel;
+
+    const shellPaths = [];
+    const imagePaths = [];
+    const seen = new Set();
+
+    for (const img of imgs) {
+      const fp = img.dataset.filePath;
+      if (!fp || seen.has(fp)) continue;
+      seen.add(fp);
+
+      const cacheKey = `${fp}|${detailsIconSize}`;
+      if (this._fileIconCache.has(cacheKey)) continue;
+
+      if (img.dataset.isImage === 'true') {
+        imagePaths.push(fp);
+      } else {
+        shellPaths.push(fp);
+      }
+    }
+
+    // 1. Images: parallel nativeImage thumbnails
+    if (imagePaths.length > 0) {
+      await Promise.all(imagePaths.map(async (fp) => {
+        try {
+          const url = await window.electronAPI.getThumbnail(fp, 128);
+          if (url && this._loadRequestId === requestId) {
+            const cacheKey = `${fp}|${detailsIconSize}`;
+            this._fileIconCache.set(cacheKey, { dataURL: url, width: 128, height: 128 });
+            this.grid?.querySelectorAll(
+              `.details-icon-slot img[data-file-path="${CSS.escape(fp)}"]`
+            ).forEach(el => { el.src = url; });
+          }
+        } catch (e) {}
+      }));
+    }
+
+    // 2. Shell icons: ONE batch IPC call
+    if (shellPaths.length > 0) {
+      if (this._loadRequestId !== requestId) return;
+      if (Math.abs(this.zoomLevel - startZoom) > 8) return;
+
+      try {
+        const results = await FileIcons.fetchWindowsIconsBatch(shellPaths, detailsIconSize);
+        if (this._loadRequestId !== requestId) return;
+
+        for (const [fp, result] of Object.entries(results || {})) {
+          if (!result || !result.dataURL) continue;
+
+          const cacheKey = `${fp}|${detailsIconSize}`;
+          this._fileIconCache.set(cacheKey, {
+            dataURL: result.dataURL,
+            width: result.width,
+            height: result.height,
+          });
+
+          this.grid?.querySelectorAll(
+            `.details-icon-slot img[data-file-path="${CSS.escape(fp)}"]`
+          ).forEach(el => { el.src = result.dataURL; });
+        }
+      } catch (e) {
+        console.error('Details batch load failed:', e);
+      }
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // Zoom
+  // ═══════════════════════════════════════════════════════════
 
   applyZoom(value, triggerSwitch = true) {
     this.zoomLevel = Math.min(100, Math.max(0, value));
@@ -343,6 +538,7 @@ class FileGrid {
     if (this.slider) this.slider.value = String(this.zoomLevel);
     this._renderItems();
     this.applyZoom(this.zoomLevel, false);
+    this._schedulePrefetch();
   }
 
   render(items) {
@@ -373,6 +569,10 @@ class FileGrid {
     this.currentMode === 'details' ? this._renderDetailsView() : this._renderIconsView();
   }
 
+  // ═══════════════════════════════════════════════════════════
+  // ICONS VIEW
+  // ═══════════════════════════════════════════════════════════
+
   _renderIconsView() {
     this.detailsHeader?.classList.add('hidden');
     this.grid.className = 'grid-icons-dynamic';
@@ -400,10 +600,9 @@ class FileGrid {
         const img = document.createElement('img');
         img.className = 'file-thumbnail';
         img.alt = '';
-        img.style.cssText = 'width:88%;height:88%;object-fit:contain;image-rendering:auto;border-radius:4px;border:1px solid rgba(255,255,255,0.18);box-shadow:0 2px 8px rgba(0,0,0,0.35);opacity:0;transition:opacity 0.15s;';
-        img.onload = () => { img.style.opacity = '1'; };
-        img.onerror = () => { img.style.display = 'none'; };
-
+img.style.cssText = 'width:88%;height:88%;object-fit:contain;object-position:center center;image-rendering:auto;border-radius:4px;border:1px solid rgba(255,255,255,0.18);box-shadow:0 2px 8px rgba(0,0,0,0.35);opacity:0;transition:opacity 0.15s;';
+img.onload = () => { img.style.opacity = '1'; };   // ← YE ADD KARO
+img.onerror = () => { img.style.display = 'none'; };
         const thumbSize = this._getThumbnailRequestSize();
         const imgCacheKey = `img:${item.path}|${thumbSize}`;
         const imgCached = this._imageCache.get(imgCacheKey);
@@ -444,11 +643,12 @@ class FileGrid {
         wrapper.className = 'shell-icon-wrapper w-full h-full flex items-center justify-center';
         wrapper.dataset.filePath = item.path;
         wrapper.dataset.iconSize = String(iconSize);
+        wrapper.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
 
         const img = document.createElement('img');
         img.className = 'shell-icon-img';
         img.alt = '';
-        img.style.cssText = 'width:100%;height:100%;object-fit:contain;object-position:center center;image-rendering:auto;transition:opacity 0.15s;';
+        img.style.cssText = 'width:100%;height:100%;max-width:100%;max-height:100%;min-width:0;min-height:0;object-fit:contain;object-position:center center;image-rendering:auto;transition:opacity 0.15s;display:block;';
 
         const cacheKey = `${item.path}|${iconSize}`;
         const cached = this._fileIconCache.get(cacheKey);
@@ -479,6 +679,10 @@ class FileGrid {
     requestAnimationFrame(() => this._loadAllShellIcons());
   }
 
+  // ═══════════════════════════════════════════════════════════
+  // DETAILS VIEW — FULL BATCH
+  // ═══════════════════════════════════════════════════════════
+
   _renderDetailsView() {
     this.detailsHeader?.classList.remove('hidden');
     this.grid.className = 'grid-details';
@@ -496,62 +700,31 @@ class FileGrid {
       const iconSlot = document.createElement('div');
       iconSlot.className = 'details-icon-slot flex items-center justify-center shrink-0';
 
-      if (item.typeCategory === 'images') {
-        const img = document.createElement('img');
-        img.className = 'details-thumb';
-        img.alt = '';
-        img.style.cssText = 'width:var(--details-icon-size);height:var(--details-icon-size);object-fit:contain;image-rendering:auto;border-radius:3px;flex-shrink:0;';
+      const isImage = item.typeCategory === 'images';
+      const img = document.createElement('img');
+      img.className = isImage ? 'details-thumb' : 'details-shell-icon';
+      img.alt = '';
+      img.dataset.filePath = item.path;
+      img.dataset.isImage = isImage ? 'true' : 'false';
+      img.style.cssText = isImage
+  ? 'width:var(--details-icon-size);height:var(--details-icon-size);object-fit:contain;object-position:center center;image-rendering:auto;border-radius:3px;flex-shrink:0;display:block;'
+  : 'width:var(--details-icon-size);height:var(--details-icon-size);object-fit:contain;object-position:center center;image-rendering:auto;flex-shrink:0;display:block;';
 
-        const detailsImgCacheKey = `img:${item.path}|128`;
-        const detailsCached = this._imageCache.get(detailsImgCacheKey);
-        if (detailsCached) {
-          img.src = detailsCached.dataURL;
-        } else {
-          img.src = 'data:image/svg+xml,' + encodeURIComponent(
-            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" opacity="0.15">' +
-            '<rect width="16" height="16" rx="1" fill="#666"/></svg>'
-          );
-          window.electronAPI.getThumbnail(item.path, 128).then(url => {
-            if (url) {
-              this._imageCache.set(detailsImgCacheKey, { dataURL: url });
-              img.src = url;
-            } else {
-              window.electronAPI.getFileIcon(item.path, detailsIconSize).then(iconResult => {
-                if (iconResult && iconResult.dataURL) img.src = iconResult.dataURL;
-                else { img.style.display = 'none'; }
-              }).catch(() => { img.style.display = 'none'; });
-            }
-          }).catch(() => { img.style.display = 'none'; });
-        }
-        iconSlot.appendChild(img);
+      const cacheKey = `${item.path}|${detailsIconSize}`;
+      const cached = this._fileIconCache.get(cacheKey);
+      if (cached) {
+        img.src = cached.dataURL;
       } else {
-        const img = document.createElement('img');
-        img.className = 'details-shell-icon';
-        img.alt = '';
-        img.style.cssText = 'width:var(--details-icon-size);height:var(--details-icon-size);object-fit:contain;object-position:center center;image-rendering:auto;flex-shrink:0;';
-
-        const cacheKey = `${item.path}|${detailsIconSize}`;
-        const cached = this._fileIconCache.get(cacheKey);
-        if (cached) {
-          img.src = cached.dataURL;
-        } else {
-          img.src = 'data:image/svg+xml,' + encodeURIComponent(
-            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" opacity="0.15">' +
-            '<path d="M3 1h7l3 3v10a1 1 0 01-1 1H3a1 1 0 01-1-1V2a1 1 0 011-1z" fill="#666" stroke="#444" stroke-width="0.5"/></svg>'
-          );
-          FileIcons.fetchWindowsIcon(item.path, detailsIconSize).then(result => {
-            if (result && result.dataURL) {
-              this._fileIconCache.set(cacheKey, {
-                dataURL: result.dataURL,
-                width: result.width,
-                height: result.height,
-              });
-              img.src = result.dataURL;
-            }
-          }).catch(() => {});
-        }
-        iconSlot.appendChild(img);
+        img.src = isImage
+          ? 'data:image/svg+xml,' + encodeURIComponent(
+              '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" opacity="0.15">' +
+              '<rect width="16" height="16" rx="1" fill="#666"/></svg>')
+          : 'data:image/svg+xml,' + encodeURIComponent(
+              '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" opacity="0.15">' +
+              '<path d="M3 1h7l3 3v10a1 1 0 01-1 1H3a1 1 0 01-1-1V2a1 1 0 011-1z" fill="#666" stroke="#444" stroke-width="0.5"/></svg>');
       }
+
+      iconSlot.appendChild(img);
 
       const nameText = document.createElement('span');
       nameText.className = 'details-name-text truncate text-win-text font-normal';
@@ -575,7 +748,13 @@ class FileGrid {
       this._attachEvents(el, item);
       this.grid.appendChild(el);
     });
+
+    requestAnimationFrame(() => this._loadAllDetailsIcons());
   }
+
+  // ═══════════════════════════════════════════════════════════
+  // Item events
+  // ═══════════════════════════════════════════════════════════
 
   _attachEvents(el, item) {
     el.addEventListener('click', (e) => { e.stopPropagation(); this._selectItem(item, el, e.ctrlKey); });
@@ -634,6 +813,10 @@ class FileGrid {
       this.statusSelection.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-win-accent"></span> ${count} items selected`;
     }
   }
+
+  // ═══════════════════════════════════════════════════════════
+  // Folder preview — 2x2 grid of actual images
+  // ═══════════════════════════════════════════════════════════
 
   _folderIconWithPreview(item) {
     return `

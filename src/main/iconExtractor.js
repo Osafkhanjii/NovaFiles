@@ -260,7 +260,7 @@ function getIconViaSHGetFileInfo(filePath) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// PowerShell batch (calls .ps1 file — fast, compiled once)
+// PowerShell batch (calls .ps1 file)
 // ═══════════════════════════════════════════════════════════
 
 async function runPowerShellJumboBatch(filePaths, targetSize) {
@@ -377,8 +377,7 @@ async function getIconsBatch(filePaths, size) {
 
   if (toFetch.length === 0) return results;
 
-  // Split: images/videos → nativeImage thumbnails (fast, parallel)
-  // Everything else → PowerShell (shell icons)
+  // Split: images/videos → nativeImage; everything else → PowerShell
   const thumbPaths = [];
   const psPaths = [];
 
@@ -413,7 +412,7 @@ async function getIconsBatch(filePaths, size) {
     } catch (e) {}
   }));
 
-  // 2. Shell icons via PowerShell batch
+  // 2. Shell icons via PowerShell (ONE batch)
   if (psPaths.length > 0) {
     try {
       const psResults = await runPowerShellJumboBatch(psPaths, targetSize);

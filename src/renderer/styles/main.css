@@ -211,6 +211,7 @@ select:focus-visible {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-start;
   text-align: center;
   transition: background-color 0.08s ease, border-color 0.08s ease;
 }
@@ -262,6 +263,11 @@ select:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
   margin-top: 6px;
+  text-align: center;
+  align-self: center;
+  /* ⬇️ YE LINE ADD KARO — -webkit-box me content center karta hai */
+  -webkit-box-pack: center;
+  justify-content: center;
 }
 
 /* Folder preview thumbnail — fade-in on load */
@@ -291,14 +297,19 @@ select:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-width: 0;
+  min-height: 0;
   overflow: hidden;
 }
 #desktop-grid.grid-icons-dynamic .icon-slot .shell-icon-img {
   width: 100%;
   height: 100%;
   object-fit: contain;
+  object-position: center center;
   image-rendering: auto;
   display: block;
+  min-width: 0;
+  min-height: 0;
 }
 #desktop-grid.grid-icons-dynamic.huge-scale .icon-slot .shell-icon-wrapper {
   width: 100%;
@@ -434,7 +445,15 @@ select:focus-visible {
   font-size: var(--details-font-size);
 }
 
-/* Slider Custom Styling */
+/* Status bar zoom area — hidden by default, visible on hover */
+footer:hover #zoom-control-area,
+#zoom-control-area.visible {
+  opacity: 1 !important;
+  max-width: 500px !important;
+  overflow: visible !important;
+}
+
+/* Zoom slider styling */
 input[type=range].win-slider {
   -webkit-appearance: none;
   appearance: none;
@@ -489,7 +508,7 @@ input[type=range].win-slider::-webkit-slider-thumb:hover,
   z-index: 10;
   flex-shrink: 0;
   transition: background-color 0.12s ease;
-  margin: 0 -1px; /* extend hit area slightly without visual width */
+  margin: 0 -1px;
 }
 
 .resize-handle:hover {
@@ -500,7 +519,6 @@ input[type=range].win-slider::-webkit-slider-thumb:hover,
   background-color: var(--win-accent);
 }
 
-/* Visual indicator line */
 .resize-handle::after {
   content: '';
   position: absolute;
