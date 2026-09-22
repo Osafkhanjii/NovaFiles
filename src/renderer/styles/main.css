@@ -445,58 +445,121 @@ select:focus-visible {
   font-size: var(--details-font-size);
 }
 
-/* Status bar zoom area — always visible, nice styling */
+/* ── Zoom Control — Windows Explorer Style ───────────────── */
+
 #zoom-control-area {
-  opacity: 1;
-  max-width: 500px;
-  overflow: visible;
-  padding-left: 5px;
-  padding-right: 5px;
-  transition: opacity 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.15s ease;
 }
 #zoom-control-area:hover {
-  opacity: 1;
+  background: rgba(255,255,255,0.06);
+}
+body.theme-light #zoom-control-area:hover {
+  background: rgba(0,0,0,0.06);
 }
 
-/* Zoom slider styling */
+/* Zoom slider with fill */
 input[type=range].win-slider {
   -webkit-appearance: none;
   appearance: none;
+  width: 100px;
+  height: 4px;
+  border-radius: 2px;
   background: #383c48;
-  height: 5px;
-  border-radius: 3px;
   outline: none;
+  cursor: pointer;
   transition: background 0.15s ease;
 }
 body.theme-light input[type=range].win-slider {
   background: #cbd0dc;
 }
-
-/* Zoom control area: highlight track when hovered */
-#zoom-control-area:hover input[type=range].win-slider {
-  background: #4a5068;
+input[type=range].win-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: #383c48;
 }
-body.theme-light #zoom-control-area:hover input[type=range].win-slider {
-  background: #b0b8cc;
+body.theme-light input[type=range].win-slider::-webkit-slider-runnable-track {
+  background: #cbd0dc;
 }
-
 input[type=range].win-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  height: 15px;
-  width: 15px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: var(--win-accent);
   cursor: pointer;
   border: 2px solid #ffffff;
-  box-shadow: 0 1px 5px rgba(0,0,0,0.45);
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  margin-top: -5px;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
-input[type=range].win-slider::-webkit-slider-thumb:hover,
-#zoom-control-area:hover input[type=range].win-slider::-webkit-slider-thumb {
-  transform: scale(1.28);
-  box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.28), 0 2px 8px rgba(0,0,0,0.5);
+input[type=range].win-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.3);
+  box-shadow: 0 0 0 3px rgba(0,120,212,0.3), 0 1px 4px rgba(0,0,0,0.5);
 }
+input[type=range].win-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--win-accent);
+  cursor: pointer;
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+input[type=range].win-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: #383c48;
+}
+body.theme-light input[type=range].win-slider::-moz-range-track {
+  background: #cbd0dc;
+}
+
+/* Zoom percentage label */
+#zoom-percent-label {
+  font-size: 10px;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  color: var(--win-accent);
+  background: var(--win-accent);
+  background: rgba(0,120,212,0.2);
+  padding: 1px 6px;
+  border-radius: 3px;
+  min-width: 40px;
+  text-align: center;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+/* Zoom slider fill effect */
+#zoom-control-area .win-slider {
+  background: linear-gradient(to right, var(--win-accent) 0%, var(--win-accent) var(--fill, 50%), #383c48 var(--fill, 50%), #383c48 100%);
+}
+body.theme-light #zoom-control-area .win-slider {
+  background: linear-gradient(to right, var(--win-accent) 0%, var(--win-accent) var(--fill, 50%), #cbd0dc var(--fill, 50%), #cbd0dc 100%);
+}
+
+/* Zoom buttons */
+#zoom-control-area button {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+/* Zoom buttons */
+#zoom-control-area button {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+/* ── Slider Custom Styling (old) ──────────────────────── */
+
+/* Slider Custom Styling */
 
 /* Modals */
 .modal-overlay {

@@ -383,16 +383,18 @@
 
       <span class="text-win-border">|</span>
 
-      <!-- Zoom / size slider (hidden by default, shown on hover) -->
-      <div class="zoom-area flex items-center gap-2" id="zoom-control-area" title="Ctrl+Scroll to zoom, hover to show controls">
-        <button class="w-6 h-6 rounded flex items-center justify-center text-win-textMuted hover:text-win-text hover:bg-white/10 transition-colors cursor-pointer" id="status-slider-dec" title="Smaller">
+      <!-- Zoom / size slider -->
+      <div class="flex items-center gap-1.5 shrink-0" id="zoom-control-area" title="Ctrl+Scroll to zoom">
+        <button class="w-6 h-6 rounded flex items-center justify-center text-win-textMuted hover:text-win-text hover:bg-win-base/80 transition-colors cursor-pointer" id="status-slider-dec" title="Smaller">
           <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14"></path></svg>
         </button>
-        <input class="win-slider w-32 cursor-pointer" id="status-icon-slider" max="100" min="0" step="1" type="range" value="48">
-        <button class="w-6 h-6 rounded flex items-center justify-center text-win-textMuted hover:text-win-text hover:bg-white/10 transition-colors cursor-pointer" id="status-slider-inc" title="Larger">
+        <div class="relative flex items-center" id="zoom-slider-wrap">
+          <input class="win-slider w-24 cursor-pointer" id="status-icon-slider" max="100" min="0" step="1" type="range" value="48">
+          <span class="absolute right-0 top-1/2 -translate-y-1/2 text-[10px] font-mono text-win-accent bg-win-accent/20 px-1 py-0.5 rounded min-w-[40px] text-center" id="zoom-percent-label">100%</span>
+        </div>
+        <button class="w-6 h-6 rounded flex items-center justify-center text-win-textMuted hover:text-win-text hover:bg-win-base/80 transition-colors cursor-pointer" id="status-slider-inc" title="Larger">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
         </button>
-        <span class="text-[11px] font-mono text-win-accent bg-win-accent/15 px-2 py-0.5 rounded font-medium min-w-[110px] text-center" id="status-size-label">Medium (112px)</span>
       </div>
     </div>
   </footer>

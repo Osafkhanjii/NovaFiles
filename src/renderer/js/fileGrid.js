@@ -19,7 +19,6 @@ class FileGrid {
     this.statusSelection  = document.getElementById('status-selection');
 
     this.slider    = document.getElementById('status-icon-slider');
-    this.sizeLabel = document.getElementById('status-size-label');
     this.btnDec    = document.getElementById('status-slider-dec');
     this.btnInc    = document.getElementById('status-slider-inc');
     this.zoomArea  = document.getElementById('zoom-control-area');
@@ -464,21 +463,19 @@ class FileGrid {
     s.setProperty('--details-padding-y', `${Math.round(3 + t * 5)}px`);
     s.setProperty('--details-gap', `${Math.round(2 + t * 4)}px`);
 
+    // Update zoom slider fill (Windows Explorer style)
+    if (this.slider) {
+      this.slider.style.setProperty('--fill', `${this.zoomLevel}%`);
+    }
+
     this.grid?.classList.toggle('huge-scale', this.zoomLevel >= 94);
   }
 
   _updateZoomLabel() {
-    if (!this.sizeLabel) return;
-    if (this.currentMode === 'details') { this.sizeLabel.textContent = 'Details View'; return; }
-    const iconT = Math.max(0, (this.zoomLevel - 20) / 80);
-    const iconSize = Math.round(52 + iconT * (360 - 52));
-    let label;
-    if (this.zoomLevel < 36)      label = `Small (${iconSize}px)`;
-    else if (this.zoomLevel < 64) label = `Medium (${iconSize}px)`;
-    else if (this.zoomLevel < 85) label = `Large (${iconSize}px)`;
-    else if (this.zoomLevel < 95) label = `X-Large (${iconSize}px)`;
-    else                          label = `Huge (${iconSize}px)`;
-    this.sizeLabel.textContent = label;
+    const percentLabel = document.getElementById('zoom-percent-label');
+    if (!percentLabel) return;
+    if (this.currentMode === 'details') { percentLabel.textContent = 'Details'; return; }
+    percentLabel.textContent = `${this.zoomLevel}%`;
   }
 
   _highlightViewButton(activeMode) {
